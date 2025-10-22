@@ -1,0 +1,1421 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> H0micide roster</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;500;700&family=Hack:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+          --intro-bg: #020304;
+          --intro-panel: #0a0d12;
+          --intro-accent: #5cb8ff;
+          --intro-muted: #9aa8b2;
+        }
+
+        #introScreen {
+          position: fixed;
+          inset: 0;
+          background: var(--intro-bg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 99999;
+          transition: opacity 0.8s ease, visibility 0.8s ease;
+          -webkit-backdrop-filter: blur(2px);
+          backdrop-filter: blur(2px);
+        }
+
+        #introScreen.hidden {
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+        }
+
+        .terminal-container {
+          width: 680px;
+          max-width: 95%;
+          background: var(--intro-panel);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          border-radius: 10px;
+          padding: 20px;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+          color: var(--intro-accent);
+          display: flex;
+          flex-direction: column;
+          font-family: 'Source Code Pro', monospace;
+        }
+
+        .term-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .term-btn {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+        }
+        .term-btn.red { background: #ff5f56; }
+        .term-btn.yellow { background: #ffbd2e; }
+        .term-btn.green { background: #27c93f; }
+
+        .log {
+          flex: 1;
+          font-size: 13px;
+          line-height: 1.45;
+          white-space: pre-wrap;
+          margin-top: 10px;
+          color: rgba(180,210,255,0.94);
+          overflow-y: auto;
+          min-height: 220px;
+          max-height: 56vh;
+        }
+
+        @keyframes blink {
+          50% { opacity: 0; }
+        }
+
+        .cursor {
+          display: inline-block;
+          width: 8px;
+          height: 14px;
+          background: var(--intro-accent);
+          margin-left: 6px;
+          vertical-align: middle;
+          animation: blink 1s steps(2) infinite;
+        }
+
+        #continueText {
+          text-align: center;
+          font-size: 13px;
+          color: var(--intro-muted);
+          opacity: 0;
+          margin-top: 12px;
+          transition: opacity 0.5s ease;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        #continueText.visible { opacity: 1; }
+
+        @media (max-width: 720px) {
+          .terminal-container { padding: 14px; width: 92%; }
+          .log { font-size: 12px; max-height: 50vh; }
+        }
+    </style>
+
+    <style>
+        :root {
+            --bg-primary: #0c0c0c;
+            --bg-secondary: #1a1a1a;
+            --bg-terminal: #000000;
+            --border: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --arch-blue: #1793d1;
+            --arch-light-blue: #5dade2;
+            --arch-dark-blue: #0f7bb3;
+            --red: #e74c3c;
+            --yellow: #f39c12;
+            --green: #2ecc71;
+            --cyan: #17a2b8;
+            --purple: #9b59b6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hack', 'Source Code Pro', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+            cursor: default;
+            font-size: 14px;
+        }
+
+        .desktop {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(ellipse at center, #111111 0%, #000000 100%);
+            overflow: hidden;
+        }
+
+        .desktop::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(23, 147, 209, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(23, 147, 209, 0.03) 0%, transparent 50%);
+            animation: archGlow 8s ease-in-out infinite alternate;
+            z-index: 1;
+        }
+
+        @keyframes archGlow {
+            0% { opacity: 0.3; }
+            100% { opacity: 0.7; }
+        }
+
+        .terminal-windows {
+            position: relative;
+            z-index: 10;
+            padding: 60px 40px 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .terminal {
+            background: var(--bg-terminal);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-height: 400px;
+            height: 400px;
+            
+        }
+
+        .terminal:hover {
+            transform: translateY(-3px);
+            border-color: var(--arch-blue);
+            box-shadow: 0 6px 25px rgba(23, 147, 209, 0.3);
+        }
+
+        .telegram-link {
+            color: rgb(153, 49, 153);
+            text-decoration: none;
+        }
+
+        .telegram-link:hover {
+            color: rgb(87, 146, 209);
+        }
+
+        .telegram-link:visited {
+            color: purple;
+        }
+
+        .terminal-header {
+            background: var(--bg-secondary);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .terminal-title {
+            color: var(--text-secondary);
+            font-weight: 400;
+            font-family: inherit;
+        }
+
+        .terminal-body {
+            padding: 15px;
+            height: calc(100% - 36px);
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-terminal);
+            position: relative;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+
+        .screenfetch-container {
+            display: flex;
+            width: 100%;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .arch-logo {
+            color: var(--arch-blue);
+            font-family: monospace;
+            white-space: pre;
+            font-size: 8px;
+            line-height: 1;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .ascii-art {
+            margin-bottom: 10px;
+        }
+
+        .system-info {
+            flex: 1;
+            color: var(--text-primary);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .info-line {
+            margin-bottom: 3px;
+            display: flex;
+        }
+
+        .info-label {
+            color: var(--arch-blue);
+            font-weight: bold;
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+        }
+
+        .command-prompt {
+            margin-top: auto;
+            color: var(--text-secondary);
+            font-size: 11px;
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+        }
+
+        .user-prompt {
+            color: var(--arch-blue);
+            font-weight: bold;
+        }
+
+        .command {
+            color: var(--text-primary);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-terminal {
+            background: var(--bg-terminal);
+            border: 1px solid var(--arch-blue);
+            border-radius: 4px;
+            min-width: 650px;
+            max-width: 750px;
+            box-shadow: 0 0 40px rgba(23, 147, 209, 0.4);
+            animation: modalSlide 0.3s ease;
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: all 0.25s ease;
+        }
+
+        .modal-terminal.minimized {
+            max-height: 64px;
+            height: auto;
+            overflow: hidden;
+        }
+
+        .modal-terminal.maximized {
+            width: 95%;
+            max-width: none;
+            height: 95vh;
+            max-height: 95vh;
+        }
+
+        .modal-header {
+            background: var(--bg-secondary);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-title {
+            color: var(--arch-blue);
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .mac-buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+            align-items: center;
+        }
+
+        .mac-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            box-shadow: inset 0 -1px rgba(0,0,0,0.2);
+        }
+        .mac-btn.red { background: #ff5f56; }
+        .mac-btn.yellow { background: #ffbd2e; }
+        .mac-btn.green { background: #27c93f; }
+
+        .mac-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--arch-blue), var(--arch-dark-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            border: 2px solid var(--arch-light-blue);
+            box-shadow: 0 0 15px rgba(23, 147, 209, 0.3);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .modal-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-details h2 {
+            color: var(--arch-blue);
+            font-size: 20px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        .user-details p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .user-status {
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .package-details {
+            background: rgba(23, 147, 209, 0.1);
+            border: 1px solid rgba(23, 147, 209, 0.3);
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .social-links {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .social-link:hover {
+            background: rgba(23, 147, 209, 0.1);
+            border-color: var(--arch-blue);
+            transform: translateX(2px);
+        }
+
+        .social-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--arch-blue);
+        }
+
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 28px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            z-index: 100;
+        }
+
+        .arch-logo-top {
+            color: var(--arch-blue);
+            font-weight: bold;
+            margin-right: 16px;
+        }
+
+        .top-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-right: 30px;
+        }
+
+        .top-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 64px;
+        }
+
+        .audio-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--arch-blue);
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            min-width: 24px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .audio-btn:hover {
+            background: rgba(23, 147, 209, 0.1);
+            border-color: var(--arch-blue);
+        }
+
+        .audio-btn.playing {
+            background: var(--arch-blue);
+            color: var(--bg-terminal);
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .volume-slider {
+            width: 60px;
+            height: 3px;
+            background: var(--border);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            background: var(--arch-blue);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            background: var(--arch-blue);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .volume-slider:hover::-webkit-slider-thumb {
+            background: var(--arch-light-blue);
+        }
+
+        .volume-text {
+            font-size: 9px;
+            color: var(--text-muted);
+            min-width: 25px;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 24px;
+            background: var(--bg-terminal);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 10px;
+            color: var(--text-muted);
+            z-index: 100;
+        }
+
+        .desktop {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            background: url('images/lainbackground.png') no-repeat center center / cover;
+            overflow: hidden;
+        }
+
+        .kernel-info {
+            color: var(--arch-blue);
+            margin-right: 20px;
+        }
+
+        .pfp-controls {
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .pfp-btn {
+            background: rgba(23, 147, 209, 0.2);
+            border: 1px solid var(--arch-blue);
+            color: var(--arch-blue);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-family: inherit;
+            cursor: pointer;
+            margin: 0 2px;
+            transition: all 0.3s ease;
+        }
+
+        .pfp-btn:hover {
+            background: rgba(23, 147, 209, 0.4);
+            color: var(--text-primary);
+        }
+
+        .extended-info {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(23, 147, 209, 0.05);
+            border: 1px solid rgba(23, 147, 209, 0.2);
+            border-radius: 4px;
+        }
+
+        .maximized .extended-info {
+            display: block;
+        }
+
+        .group-info {
+            margin-bottom: 15px;
+        }
+
+        .group-info h3 {
+            color: var(--arch-blue);
+            font-size: 14px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(23, 147, 209, 0.3);
+            padding-bottom: 4px;
+        }
+
+        .group-info p {
+            font-size: 11px;
+            line-height: 1.4;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .terminal-windows {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .terminal-windows {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 40px 20px 30px;
+            }
+
+            .modal-terminal {
+                min-width: 90%;
+                margin: 20px;
+            }
+
+            .social-links {
+                grid-template-columns: 1fr;
+            }
+
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .screenfetch-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .arch-logo {
+                font-size: 6px;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--arch-blue);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--arch-light-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="introScreen" aria-hidden="false">
+      <div class="terminal-container" role="dialog" aria-label="Intro terminal">
+        <div class="term-header" aria-hidden="true">
+          <div class="term-btn red"></div>
+          <div class="term-btn yellow"></div>
+          <div class="term-btn green"></div>
+        </div>
+
+        <div class="log" id="termLog" aria-live="polite" tabindex="0"></div>
+        <div id="continueText" aria-hidden="true">Access granted. Click to continue...</div>
+      </div>
+    </div>
+
+    <div class="desktop">
+        <div class="top-bar">
+            <div class="arch-logo-top">H0micide.net</div>
+            <div class="top-info">
+                <span>Terminal Session</span>
+                <span>2 active connections</span>
+            </div>
+            <div class="audio-controls">
+                <button class="audio-btn" id="playPauseBtn" onclick="toggleAudio()">▶</button>
+                <div class="volume-container">
+                    <span style="font-size: 9px; color: var(--arch-blue);">♪</span>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50" oninput="setVolume(this.value)">
+                    <span class="volume-text" id="volumeText">50%</span>
+                </div>
+            </div>
+            <div class="top-right">
+                <span id="load-avg">Load: 1.1.0 0.01 1.1</span>
+                <span id="clock">00:00:00</span>
+            </div>
+        </div>
+
+        <div class="terminal-windows">
+            <div class="terminal" onclick="openProfile('xo')">
+                <div class="terminal-header">
+                    <div class="terminal-title">[3wu@H0micide.net ~]</div>
+                </div>
+                <div class="terminal-body">
+                    <div class="screenfetch-container">
+                        <div class="arch-logo">
+                            <div class="ascii-art">
+ 
+
+                                  
+       \`*-.                    
+         )  _`-.                 
+       .  : `. .                
+       : _   '  \               
+       ; *` _.   `*-._          
+       `-.-'          `-.       
+         ;       `       `.     
+         :.       .        \    
+         . \  .   :   .-'   .   
+         '  `+.;  ;  '      :   
+         :  '  |    ;       ;-. 
+         ; '   : :`-:     _.`* ;
+[purge] .*' /  .*' ; .*`- +'  `*' 
+      `*-*   `*-*  `*-*'
+                    </div>
+                </div>
+                <div class="system-info">
+                    <pre class="info-block">╭───────────────────── root@H0micide ──────────────────────╮
+│  User        : 3wu@H0micide.net                         │
+│  Alias       : purgeʳᵉᶜ                                 │
+│  Telegram    : <a href="https://t.me/highschoolmusicals" class="telegram-link" target="_blank" onclick="event.stopPropagation()">https://t.me/highschoolmusicals</a>          │
+│  Bio         : Security researcher & Linux enthusiast   │
+│ 📝 Description: old lapsus and infinity recursion member │
+│               Founder of iH0micide.net since 2023        │
+├──────────────────────── SYSTEMS ─────────────────────────┤
+│  OS          :                                          │
+│ 📂 Arch Linux                                            │
+│ 📁 Ubuntu     : 20.10 Groovy Gorilla                     │
+│ 📂 Debian     : 10 Buster                                │
+├────────────────────── LANGUAGES ─────────────────────────┤
+│  Python, GO                                             │
+│  Bash, SQL, Ruby                                        │
+│  C++, C, C#                                             │
+│  JavaScript                                             │
+│  HTML / CSS                                             │
+├──────────────────────────────────────────────────────────┤
+│ ● ● ● ● ● ● ● ●                                          │
+╰──────────────────────────────────────────────────────────╯
+                    </pre>
+                </div>
+            </div>
+            <div class="command-prompt">
+                <span class="user-prompt">[3wu@H0micide.net ~]$</span>
+                <span class="command"> open profile</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="terminal" onclick="openProfile('recursion')">
+        <div class="terminal-header">
+            <div class="terminal-title">[Recursions@H0micide.net ~]</div>
+        </div>
+        <div class="terminal-body">
+            <div class="screenfetch-container">
+                <div class="arch-logo">
+                    <div class="ascii-art">
+
+                                   
+       \`*-.                    
+        )  _`-.                 
+       .  : `. .                
+       : _   '  \               
+       ; *` _.   `*-._          
+       `-.-'          `-.       
+         ;       `       `.     
+         :.       .        \    
+         . \  .   :   .-'   .   
+         '  `+.;  ;  '      :   
+         :  '  |    ;       ;-. 
+         ; '   : :`-:     _.`* ;
+[recursions] .*' /  .*' ; .*`- +'  `*' 
+      `*-*   `*-*  `*-*'
+                    </div>
+                </div>
+                <div class="system-info">
+                    <pre class="info-block">╭───────────────────── root@H0micide ────────────────────╮
+│  User        : Recursions@H0micide.net                │
+│  Alias       : Recursionsʳᵉᶜ                          │
+│  Telegram    : <a href="https://t.me/ihaveroot" class="telegram-link" target="_blank" onclick="event.stopPropagation()">https://t.me/ihaveroot</a>                 │
+│  Bio         : Cybersecurity. Opsec demon.            │
+│ 📝 Description:                                        │
+│               Opsec enthusiast & Linux aficionado      │
+├──────────────────────── SYSTEMS ───────────────────────┤
+│  OS          :                                        │
+│ 📂 Arch Linux                                          │
+│ 📁 Ubuntu     : 22.04 Jammy Jellyfish                  │
+│ 📂 Debian     : 11 Bullseye / GNU Linux                │
+├────────────────────── LANGUAGES ───────────────────────┤
+│  Python, GO                                           │
+│  Bash, SQL, Ruby                                      │
+│  C++, C, C#                                           │
+│  JavaScript                                           │
+│  HTML / CSS                                           │
+├────────────────────────────────────────────────────────┤
+│ ● ● ● ● ● ● ● ●                                        │
+╰────────────────────────────────────────────────────────╯
+                            </pre>
+                        </div>
+                    </div>
+                    <div class="command-prompt">
+                        <span class="user-prompt">[Recursions@H0micide.net ~]$</span>
+                        <span class="command"> sudo pacman -S opsec</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <div class="kernel-info">ᴍᴀᴅᴇ ᴡɪᴛʜ ღ ʙʏ ʀᴇᴄᴜʀꜱɪᴏɴꜱ</div>
+            <span>uptime: <span id="uptime">0:00</span></span>
+            <span style="margin-left: auto;">ᴡᴇ ʟᴏᴠᴇ H0micide.ɴᴇᴛ</span>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-xo" aria-hidden="true">
+        <div class="modal-terminal" id="modal-terminal-xo" role="dialog" aria-modal="true" aria-labelledby="modal-title-xo">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title-xo">[3wu@H0micide.net ~]$ nano ~/.profile</div>
+                <div class="mac-buttons" role="toolbar" aria-label="window controls">
+                    <span class="mac-btn red" title="Close" role="button" aria-label="Close" onclick="closeModal('xo')"></span>
+                    <span class="mac-btn yellow" title="Minimize" role="button" aria-label="Minimize" onclick="toggleMinimize('xo')"></span>
+                    <span class="mac-btn green" title="Maximize" role="button" aria-label="Maximize" onclick="toggleMaximize('xo')"></span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="user-info">
+                    <div class="user-details">
+                        <h2>purge</h2>
+                        <p>Security Researcher & Former Member of Lapsus$ & Infinity Recursion</p>
+                        <div class="user-status">● Online - Active in cybersecurity research</div>
+                    </div>
+                </div>
+                <div class="package-details">
+                    <strong>Package Information:</strong><br>
+                    Name: purge<br>
+                    Version: 1.1.0<br>
+                    Description: Security researcher with background in high-profile hacking groups<br>
+                    Dependencies: Python, Go, C++, JavaScript, SQL
+                </div>
+                
+                
+                <div class="extended-info">
+                    <div class="group-info">
+                        <h3>Lapsus$ Hacking Group</h3>
+                        <p>Lapsus$ was a high-profile international extortion-focused hacker group known for its cyberattacks against large technology companies. The group first appeared in late 2021 and gained notoriety in 2022 for its successful breaches of major corporations including Microsoft, NVIDIA, Samsung, Okta, and Uber.</p>
+                        
+                        <p><strong>Notable Operations:</strong></p>
+                        <p>- NVIDIA data breach (February 2022): Stole 1TB of data including employee credentials and proprietary technology</p>
+                        <p>- Samsung data breach (March 2022): Accessed and leaked 190GB of confidential data</p>
+                        <p>- Microsoft breach (March 2022): Claimed access to Bing and Cortana source code</p>
+                        <p>- Okta compromise (March 2022): Gained access to customer support system affecting hundreds of companies</p>
+                        
+                        <p>The group was known for its aggressive social engineering tactics, SIM-swapping attacks, and recruiting insiders at target companies. Lapsus$ operated primarily through Telegram, where they communicated with members and leaked stolen data.</p>
+                    </div>
+                    
+                    <div class="group-info">
+                        <h3>Infinity Recursion</h3>
+                        <p>Infinity Recursion is an advanced cybersecurity research collective focused on vulnerability discovery, exploit development, and security tooling. The group operates at the intersection of academic security research and practical offensive security.</p>
+                        
+                        <p><strong>Areas of Expertise:</strong></p>
+                        <p>- Zero-day vulnerability research across multiple platforms and applications</p>
+                        <p>- Advanced persistent threat (APT) simulation and detection evasion</p>
+                        <p>- Custom tool development for penetration testing and red team operations</p>
+                        <p>- Reverse engineering of malware and security products</p>
+                        <p>- Cryptographic implementation analysis and attacks</p>
+                        
+                        <p>The group maintains a strong focus on operational security and follows strict opsec protocols during research and testing activities. Members contribute to the broader security community through responsible disclosure and educational content.</p>
+                    </div>
+                    
+                    <div class="group-info">
+                        <h3>Background & Experience</h3>
+                        <p>As a former member of both Lapsus$ and Infinity Recursion, I bring unique perspective from both high-profile offensive operations and rigorous security research methodologies. My experience spans:</p>
+                        
+                        <p>- Social engineering and human factor exploitation</p>
+                        <p>- Corporate network penetration and lateral movement</p>
+                        <p>- Cloud infrastructure security assessment (AWS, Azure, GCP)</p>
+                        <p>- Mobile application security (iOS/Android)</p>
+                        <p>- Red team tool development and customization</p>
+                        <p>- Incident response and digital forensics</p>
+                        
+                        <p>Currently focused on advancing cybersecurity education and developing open-source security tools through H0micide.net, founded in 2023 to create a platform for knowledge sharing and community collaboration in the security space.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-recursion" aria-hidden="true">
+        <div class="modal-terminal" id="modal-terminal-recursion" role="dialog" aria-modal="true" aria-labelledby="modal-title-recursion">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title-recursion">[Recursion@H0micide.net ~]$ nano ~/.profile</div>
+                <div class="mac-buttons" role="toolbar" aria-label="window controls">
+                    <span class="mac-btn red" title="Close" role="button" aria-label="Close" onclick="closeModal('recursion')"></span>
+                    <span class="mac-btn yellow" title="Minimize" role="button" aria-label="Minimize" onclick="toggleMinimize('recursion')"></span>
+                    <span class="mac-btn green" title="Maximize" role="button" aria-label="Maximize" onclick="toggleMaximize('recursion')"></span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="user-info">
+                    <div class="user-details">
+                        <h2>Recursion</h2>
+                        <p>Working for @interpol | Blackhat</p>
+                        <div class="user-status">● Nearby - I will run a train on you and your family.</div>
+                    </div>
+                </div>
+                <div class="package-details">
+                    <strong>Package Information:</strong><br>
+                    Name: ihaveroot.<br>
+                    Version: 1.1.0<br>
+                    Description: SQL testing & injection enthusiast (for testing/pentesting).<br>
+                    Dependencies: SQL tooling.(I am currently SQL injecting on your database)
+                </div>
+            </div>
+            <div class="extended-info">
+    <div class="group-info">
+        <h3>Blackhat Operations & Capabilities</h3>
+        <p><strong>Underground Specialization:</strong> Elite blackhat operator with extensive experience in unauthorized access, data exfiltration, and advanced persistent threats.</p>
+        
+        <p><strong>Programming & Weaponization:</strong></p>
+        <p>• Python - Weaponized (Custom malware, C2 infrastructure, exploit tooling)</p>
+        <p>• Go (Golang) - Advanced (Undetectable malware, encrypted communications)</p>
+        <p>• C/C++ - Expert (Kernel-level rootkits, memory manipulation, bypassing EDR)</p>
+        <p>• JavaScript/Node.js - Advanced (Browser exploits, credential harvesting, XSS worms)</p>
+        <p>• SQL - Master (Database infiltration, data extraction, covering tracks)</p>
+        <p>• Bash/Shell - Expert (Post-exploitation automation, persistence mechanisms)</p>
+        <p>• Ruby - Intermediate (Custom payloads, social engineering toolkits)</p>
+        <p>• Assembly (x86/x64) - Advanced (Shellcode development, anti-analysis techniques)</p>
+        
+        <p><strong>Database Infiltration:</strong></p>
+        <p>• MySQL, PostgreSQL - Unauthorized access & data extraction</p>
+        <p>• MongoDB, Redis - NoSQL injection & credential harvesting</p>
+        <p>• Elasticsearch - Log manipulation & evidence destruction</p>
+        <p>• Database backdooring & persistence establishment</p>
+    </div>
+    
+    <div class="group-info">
+        <h3>Operating System Exploitation</h3>
+        <p><strong>Linux/Unix Targeting:</strong></p>
+        <p>• Arch Linux - Custom kernel modules for stealth operations</p>
+        <p>• Ubuntu/Debian - Privilege escalation & service exploitation</p>
+        <p>• Red Hat/CentOS - Enterprise network penetration</p>
+        <p>• Kali Linux - Tool modification for offensive operations</p>
+        <p>• Rootkit development & deployment</p>
+        
+        <p><strong>Windows Compromise:</strong></p>
+        <p>• Windows 10/11 - Bypassing Defender & security controls</p>
+        <p>• Windows Server 2012-2022 - Domain dominance & Golden Ticket attacks</p>
+        <p>• PowerShell Empire & offensive automation</p>
+        <p>• Windows API manipulation for stealth operations</p>
+    </div>
+    
+    <div class="group-info">
+        <h3>Zero-Day Arsenal & Exploitation</h3>
+        <p><strong>Underground Research:</strong></p>
+        <p>• Private zero-day acquisition & development</p>
+        <p>• Memory corruption weaponization (RCE, LPE)</p>
+        <p>• Web application chain exploits for maximum impact</p>
+        <p>• Network protocol manipulation & MITM attacks</p>
+        <p>• Browser exploitation chains (Chrome, Firefox, Edge)</p>
+        <p>• Mobile device compromise (Android/iOS jailbreaks)</p>
+        
+        <p><strong>Advanced Tradecraft:</strong></p>
+        <p>• Custom ROP chains bypassing all modern protections</p>
+        <p>• Kernel-mode payloads for persistent access</p>
+        <p>• Web technology exploitation at scale</p>
+        <p>• Cryptographic implementation attacks</p>
+        <p>• Automated vulnerability discovery for offensive use</p>
+    </div>
+    
+    <div class="group-info">
+        <h3>Blackhat Specializations</h3>
+        <p><strong>Cloud Infiltration:</strong></p>
+        <p>• AWS, Azure, GCP unauthorized access & resource hijacking</p>
+        <p>• Container escape & orchestration compromise</p>
+        <p>• Serverless function backdooring</p>
+        
+        <p><strong>Network Domination:</strong></p>
+        <p>• Corporate network penetration & lateral movement</p>
+        <p>• Firewall evasion & IDS/IPS neutralization</p>
+        <p>• VPN exploitation & encrypted tunnel monitoring</p>
+        
+        <p><strong>Malware Engineering:</strong></p>
+        <p>• Advanced persistent threat (APT) simulation</p>
+        <p>• Firmware-level persistence & bootkits</p>
+        <p>• Mobile surveillance tool development</p>
+        
+        <p><strong>Anti-Forensics:</strong></p>
+        <p>• Evidence elimination & log manipulation</p>
+        <p>• Memory artifact destruction</p>
+        <p>• Network traffic obfuscation</p>
+    </div>
+    
+    <div class="group-info">
+        <h3>Underground Operations</h3>
+        <p>Operating in the digital shadows with extensive experience in unauthorized network operations, corporate espionage, and advanced cyber intrusion techniques. My work focuses on practical results rather than theoretical security.</p>
+        
+        <p><strong>Current Operations:</strong> Advanced persistent threat campaigns, zero-day weaponization, and developing next-generation offensive tools through underground channels. Focused on real-world impact and maintaining operational superiority in the cyber domain.</p>
+        
+        <p><strong>Notable Achievements:</strong> Multiple successful enterprise network compromises, proprietary data extraction operations, and development of undetectable persistence mechanisms for high-value targets.</p>
+    </div>
+</div>
+        </div>
+    </div>
+
+    <script>
+        function openProfile(type) {
+            const modal = document.getElementById(`modal-${type}`);
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal(type) {
+            const modal = document.getElementById(`modal-${type}`);
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function toggleMinimize(type) {
+            const modalTerminal = document.getElementById(`modal-terminal-${type}`);
+            if (modalTerminal) {
+                modalTerminal.classList.toggle('minimized');
+            }
+        }
+
+        function toggleMaximize(type) {
+            const modalTerminal = document.getElementById(`modal-terminal-${type}`);
+            if (modalTerminal) {
+                modalTerminal.classList.toggle('maximized');
+                
+                const modalTitle = document.getElementById(`modal-title-${type}`);
+                if (modalTerminal.classList.contains('maximized')) {
+                    if (type === 'xo') {
+                        modalTitle.textContent = '[3wu@H0micide.net ~]$ cat groups_info.txt';
+                    }
+                } else {
+                    if (type === 'xo') {
+                        modalTitle.textContent = '[3wu@H0micide.net ~]$ nano ~/.profile';
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
+
+    <script>
+        (function(){
+            const commands = [
+                "sudo pacman -Syu",
+                "tail -f /var/log/auth.log",
+                "sqlmap -u 'http://example.com/vuln?id=1' --batch --dbs",
+                "ssh-keygen -t rsa -b 4096",
+                "nmap -sS 192.168.1.0/24",
+                "htop",
+                "journalctl -f",
+                "iptables -L -n",
+                "docker ps -a",
+                "run inf0sec.wraith",
+                "curl -I https://H0micide.net",
+                "echo 'Access granted'"
+            ];
+
+            const termLog = document.getElementById('termLog');
+            const introScreen = document.getElementById('introScreen');
+            const continueText = document.getElementById('continueText');
+
+            async function typeLine(text, speed = 12) {
+                for (let i = 0; i < text.length; i++) {
+                    termLog.textContent += text[i];
+                    await new Promise(r => setTimeout(r, speed + Math.random() * 18));
+                    termLog.scrollTop = termLog.scrollHeight;
+                }
+                termLog.textContent += "\n";
+                termLog.scrollTop = termLog.scrollHeight;
+            }
+
+            async function runTerminal() {
+                await new Promise(r => setTimeout(r, 240));
+                for (let i = 0; i < 7; i++) {
+                    const cmd = commands[Math.floor(Math.random() * commands.length)];
+                    await typeLine("$ " + cmd);
+                    await new Promise(r => setTimeout(r, 130 + Math.random() * 200));
+                }
+                await typeLine("$ echo 'Access granted'");
+                termLog.innerHTML += '\n<span class="cursor" aria-hidden="true"></span>';
+                continueText.classList.add('visible');
+
+                const finish = () => {
+                    introScreen.classList.add('hidden');
+                    setTimeout(() => { try { introScreen.remove(); } catch(e){} }, 900);
+                    document.removeEventListener('click', finish);
+                    document.removeEventListener('keydown', finish);
+                    document.body.style.overflow = '';
+                };
+
+                document.addEventListener('click', finish, { once: true });
+                document.addEventListener('keydown', finish, { once: true });
+            }
+
+            if (document.readyState === "complete" || document.readyState === "interactive") {
+                runTerminal();
+            } else {
+                window.addEventListener('DOMContentLoaded', runTerminal);
+            }
+        })();
+    </script>
+
+    <script>
+        let startTime = Date.now();
+        let audio = null;
+        let isPlaying = false;
+        let currentTrack = 1;
+
+        const AUDIO_FILE_PATH = 'z.mp3';
+        const AUDIO_FILE_PATH_ALT = 'just.mp3';
+
+        function updateStatus(message, color) {
+            const fileStatus = document.getElementById('fileStatus');
+            if (fileStatus) {
+                fileStatus.textContent = message;
+                fileStatus.style.color = color;
+            } else {
+                console.log('[audio status]', message);
+            }
+        }
+
+        function initAudioFromPath(filePath) {
+            if (!filePath) return;
+
+            if (audio) {
+                audio.pause();
+                audio = null;
+            }
+
+            audio = new Audio(filePath);
+            audio.loop = false; 
+            audio.volume = 0.5;
+
+            audio.addEventListener('canplaythrough', tryAutoPlay);
+            audio.addEventListener('loadstart', () => updateStatus('Loading audio...', '#ffff00'));
+            audio.addEventListener('loadeddata', () => updateStatus('Audio loaded successfully', '#00ff00'));
+            audio.addEventListener('error', () => updateStatus('Failed to load audio file.', '#ff0000'));
+
+            audio.addEventListener('ended', () => {
+                nextTrack(); 
+            });
+
+            audio.load();
+        }
+
+        function tryAutoPlay() {
+            if (!audio || isPlaying) return;
+
+            setTimeout(() => {
+                audio.play().then(() => {
+                    isPlaying = true;
+                    const playBtn = document.getElementById('playPauseBtn');
+                    if (playBtn) {
+                        playBtn.textContent = '⏸';
+                        playBtn.classList.add('playing');
+                    }
+                    updateStatus('Playing audio', '#00ff00');
+                }).catch(() => {
+                    updateStatus('Click anywhere to start audio', '#ffff00');
+
+                    const enableAudio = () => {
+                        if (!isPlaying && audio) {
+                            audio.play().then(() => {
+                                isPlaying = true;
+                                const playBtn = document.getElementById('playPauseBtn');
+                                if (playBtn) {
+                                    playBtn.textContent = '⏸';
+                                    playBtn.classList.add('playing');
+                                }
+                                updateStatus('Playing audio', '#00ff00');
+                            }).catch(() => updateStatus('Audio play failed', '#ff0000'));
+                        }
+
+                        document.removeEventListener('click', enableAudio);
+                        document.removeEventListener('keydown', enableAudio);
+                        document.removeEventListener('touchstart', enableAudio);
+                    };
+
+                    document.addEventListener('click', enableAudio, { once: true });
+                    document.addEventListener('keydown', enableAudio, { once: true });
+                    document.addEventListener('touchstart', enableAudio, { once: true });
+                });
+            }, 100);
+        }
+
+        function toggleAudio() {
+            if (!audio) return updateStatus('No audio initialized', '#ff0000');
+
+            const playBtn = document.getElementById('playPauseBtn');
+            if (isPlaying) {
+                audio.pause();
+                isPlaying = false;
+                if (playBtn) {
+                    playBtn.textContent = '▶';
+                    playBtn.classList.remove('playing');
+                }
+                updateStatus('Audio paused', '#ffff00');
+            } else {
+                audio.play().then(() => {
+                    isPlaying = true;
+                    if (playBtn) {
+                        playBtn.textContent = '⏸';
+                        playBtn.classList.add('playing');
+                    }
+                    updateStatus('Playing audio', '#00ff00');
+                }).catch(() => updateStatus('Unable to play audio', '#ff0000'));
+            }
+        }
+
+        function setVolume(volume) {
+            if (audio) audio.volume = volume / 100;
+            const volText = document.getElementById('volumeText');
+            if (volText) volText.textContent = volume + '%';
+        }
+
+        function nextTrack() {
+            currentTrack = (currentTrack === 1) ? 2 : 1;
+            const filePath = currentTrack === 1 ? AUDIO_FILE_PATH : AUDIO_FILE_PATH_ALT;
+            updateStatus('Skipping to track ' + currentTrack, '#00ffff');
+            initAudioFromPath(filePath);
+            setTimeout(() => {
+                if (audio) {
+                    audio.loop = true;
+                    audio.play();
+                    isPlaying = true;
+                    const playBtn = document.getElementById('playPauseBtn');
+                    if (playBtn) {
+                        playBtn.textContent = '⏸';
+                        playBtn.classList.add('playing');
+                    }
+                }
+            }, 200);
+        }
+
+        function prevTrack() {
+            currentTrack = (currentTrack === 1) ? 2 : 1;
+            const filePath = currentTrack === 1 ? AUDIO_FILE_PATH : AUDIO_FILE_PATH_ALT;
+            updateStatus('Going back to track ' + currentTrack, '#00ffff');
+            initAudioFromPath(filePath);
+            setTimeout(() => {
+                if (audio) {
+                    audio.loop = true;
+                    audio.play();
+                    isPlaying = true;
+                    const playBtn = document.getElementById('playPauseBtn');
+                    if (playBtn) {
+                        playBtn.textContent = '⏸';
+                        playBtn.classList.add('playing');
+                    }
+                }
+            }, 200);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                nextTrack();
+            } else if (e.key === 'ArrowLeft') {
+                prevTrack();
+            }
+        });
+
+        initAudioFromPath(AUDIO_FILE_PATH);
+    </script>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const clockEl = document.getElementById('clock');
+            if (clockEl) clockEl.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+
+        function updateUptime() {
+            const elapsed = Date.now() - startTime;
+            const hours = Math.floor(elapsed / (1000*60*60));
+            const minutes = Math.floor((elapsed % (1000*60*60)) / (1000*60));
+            const uptimeEl = document.getElementById('uptime');
+            if (uptimeEl) uptimeEl.textContent = `${hours}:${minutes.toString().padStart(2,'0')}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initAudioFromPath(AUDIO_FILE_PATH);
+            updateClock();
+            updateUptime();
+            setInterval(updateClock, 1000);
+            setInterval(updateUptime, 60000);
+        });
+    </script>
+    <script src="devtools.js"></script>
+    <script src="devtools.min.js"></script>
+    <script src="js/customcursor.js"></script>
+
+
+</body></html>
